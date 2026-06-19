@@ -461,6 +461,13 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans TC',sans-seri
 <div class="home-mood" id="homeMood">
 <div class="mood-row"><span class="mood-label">整體市場</span><span class="mood-val mood-side" id="homeMoodVal">分析中...</span></div>
 <div class="mood-desc" id="homeMoodDesc">正在獲取市場資料...</div>
+<div class="mood-row" style="margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
+<span class="mood-label">😨😎 恐慌貪婪指數</span>
+<span id="fngVal" style="font-family:'Rajdhani',sans-serif;font-size:20px;font-weight:700;color:var(--gold)">—</span>
+</div>
+<div style="height:6px;background:#1a2030;border-radius:3px;margin-top:6px;overflow:hidden">
+<div id="fngBar" style="height:100%;width:50%;background:var(--gold);border-radius:3px;transition:all 0.3s"></div>
+</div>
 </div>
 <div class="home-sec-title">📰 最新加密新聞</div>
 <div id="homeNewsList"><div style="color:var(--muted);font-size:var(--fs-sm)">載入新聞中...</div></div>
@@ -580,14 +587,16 @@ var obTab='bid',obInstId='',obCurrentSig=null;
 var prevSignalMap={};
 var goneAlerted=new Set();
 var ECON=[
-{name:'🔥 FOMC 利率決議（今日6/18）',date:'2026-06-18T02:00',impact:'both',desc:'今日重大事件，建議縮倉等結果再操作。'},
-{name:'美國 CPI 通膨',date:'2026-07-15T20:30',impact:'bull',desc:'低於預期→降息預期↑→加密幣漲。高於預期→跌。'},
-{name:'Fed 利率決議',date:'2026-07-30T02:00',impact:'both',desc:'降息→幣市大漲。升息或鷹派言論→幣市大跌。'},
-{name:'美國非農就業',date:'2026-07-03T20:30',impact:'both',desc:'就業疲弱→降息機率升→幣市偏多。'},
-{name:'美國失業率',date:'2026-07-03T20:30',impact:'both',desc:'失業率上升→降息預期增加→幣市可能看漲。'},
-{name:'美國 GDP 初值',date:'2026-07-30T20:30',impact:'both',desc:'GDP 疲弱可能加速降息，短期偏多。'},
-{name:'傑克森霍爾年會',date:'2026-08-27T00:00',impact:'both',desc:'Fed 主席發言，最重要事件之一，影響全球資產。'},
+{name:'Fed 利率決議（FOMC）',date:'2026-07-29T02:00',impact:'both',desc:'降息→幣市大漲。升息或鷹派言論→幣市大跌。記者會 02:30 台灣時間。'},
+{name:'Fed 利率決議（FOMC）',date:'2026-09-17T02:00',impact:'both',desc:'9月會議含經濟預測(SEP)，市場關注度最高。降息→大漲，鷹派→大跌。'},
+{name:'Fed 利率決議（FOMC）',date:'2026-10-28T02:00',impact:'both',desc:'降息→幣市大漲。升息或鷹派言論→幣市大跌。'},
+{name:'Fed 利率決議（FOMC）',date:'2026-12-10T03:00',impact:'both',desc:'年底最後一次會議，含經濟預測(SEP)。降息→大漲，鷹派→大跌。'},
+{name:'美國 CPI 通膨',date:'2026-07-14T20:30',impact:'bull',desc:'低於預期→降息預期↑→加密幣漲。高於預期→跌。'},
+{name:'美國 CPI 通膨',date:'2026-08-12T20:30',impact:'bull',desc:'低於預期→降息預期↑→加密幣漲。高於預期→跌。'},
+{name:'美國非農就業',date:'2026-07-02T20:30',impact:'both',desc:'就業疲弱→降息機率升→幣市偏多。'},
+{name:'美國非農就業',date:'2026-08-07T20:30',impact:'both',desc:'就業疲弱→降息機率升→幣市偏多。'},
 {name:'美國 PPI 生產者物價',date:'2026-07-15T20:30',impact:'bull',desc:'PPI 下降代表通膨減緩，利好降息預期。'},
+{name:'傑克森霍爾年會',date:'2026-08-21T22:00',impact:'both',desc:'Fed 主席發言，最重要事件之一，影響全球資產。'},
 ];
 
 function switchPage(p){
@@ -941,14 +950,36 @@ var POS_W=['surge','bull','rally','breakout','gains','rise','soar','pump','bulli
 var NEG_W=['crash','dump','fall','drop','plunge','bear','hack','fraud','lawsuit','ban','selloff','bearish','warning','liquidat','exploit','rug'];
 function extractCoins(txt){var u=txt.toUpperCase();return COIN_LIST.filter(function(c){return u.includes(c);});}
 function guessSent(txt){var l=txt.toLowerCase(),p=0,n=0;POS_W.forEach(function(w){if(l.includes(w))p++;});NEG_W.forEach(function(w){if(l.includes(w))n++;});return p>n?'pos':n>p?'neg':'neu';}
+// ── 恐慌貪婪指數 ────────────────────────────────────────────
+async function fetchFNG(){
+try{
+var r=await fetchWT('https://api.alternative.me/fng/?limit=1',5000);
+if(!r)return null;
+var j=await safeJ(r);
+if(!j||!j.data||!j.data[0])return null;
+var d=j.data[0];
+return{value:parseInt(d.value),label:d.value_classification,labelZh:fngLabelZh(d.value_classification)};
+}catch(e){return null;}
+}
+function fngLabelZh(label){
+var map={'Extreme Fear':'極度恐懼','Fear':'恐懼','Neutral':'中性','Greed':'貪婪','Extreme Greed':'極度貪婪'};
+return map[label]||label;
+}
+function fngColor(v){
+if(v<=25)return'#F03D3D';if(v<=45)return'#E87820';if(v<=55)return'#D4A017';if(v<=75)return'#00C076';return'#00E5A8';
+}
+
 async function fetchNews(){
 try{
-var r=await fetchWT('https://min-api.cryptocompare.com/data/v2/news/?lang=EN&sortOrder=latest&limit=40',5000);if(!r)return[];
-var j=await r.json();if(j.Type!==100)return[];
-var now24=Date.now()-24*60*60*1000;
-return j.Data.filter(function(n){return n.published_on*1000>now24;}).map(function(n){
-var full=n.title+' '+(n.body||'')+' '+(n.categories||'');
-return{title:n.title,url:n.url,source:n.source_info?n.source_info.name:n.source,published:new Date(n.published_on*1000),coins:extractCoins(full),sentiment:guessSent(full)};
+var rssUrl=encodeURIComponent('https://cointelegraph.com/rss');
+var r=await fetchWT('https://api.rss2json.com/v1/api.json?rss_url='+rssUrl+'&count=30&api_key=ojqypvdnx4s8ehnlshev8yte7wn3edmaaascrtwd',6000);
+if(!r)return[];
+var j=await safeJ(r);
+if(!j||j.status!=='ok'||!j.items)return[];
+var now6h=Date.now()-6*60*60*1000;
+return j.items.filter(function(n){return new Date(n.pubDate).getTime()>now6h;}).map(function(n){
+var full=n.title+' '+(n.description||'');
+return{title:n.title,url:n.link,source:'CoinTelegraph',published:new Date(n.pubDate),coins:extractCoins(full),sentiment:guessSent(full)};
 });
 }catch(e){return[];}
 }
@@ -1058,6 +1089,15 @@ if(idx>=0&&cards[idx]){cards[idx].innerHTML='<div class="hc-sym">'+sym+'</div><d
 }catch(e){}
 }
 
+function renderFNG(fng){
+if(!fng)return;
+var v=fng.value,color=fngColor(v);
+var valEl=document.getElementById('fngVal');
+if(valEl){valEl.textContent=v+' '+fng.labelZh;valEl.style.color=color;}
+var barEl=document.getElementById('fngBar');
+if(barEl){barEl.style.width=v+'%';barEl.style.background=color;}
+}
+
 function renderCalendar(){
 var el=document.getElementById('calList');if(!el)return;
 var now=new Date();
@@ -1082,11 +1122,7 @@ return'<div class="cal-item'+(isPast?' cal-past':'')+'">'
 function setTF(bar){
 selectedBar=bar;
 ['15m','1H','4H'].forEach(function(b){var el=document.getElementById('tf'+b);if(el)el.classList.toggle('active',b===bar);});
-loadWL();
-loadWL();updateWLFab();
 startScan();
-setInterval(checkWLPrices,30000);
-setInterval(checkWLPrices,30000);
 }
 
 function startPriceRefresh(){
@@ -1745,6 +1781,7 @@ function clearBellUnread(){
 function addBellEvent(icon,text){
   bellNotifs.unshift({icon:icon,text:text,time:Date.now()});
   if(bellNotifs.length>50)bellNotifs.pop();
+  try{localStorage.setItem('bell_v1',JSON.stringify(bellNotifs));}catch(e){}
   var btn=document.getElementById('btnNotif');
   if(btn){btn.classList.add('active');btn.textContent='🔔';}
   renderBellDrop();
@@ -1850,8 +1887,16 @@ function loadWL(){
   try{
     var d=localStorage.getItem('wl_v2');
     if(d)watchList=JSON.parse(d);
+    var bd=localStorage.getItem('bell_v1');
+    if(bd)bellNotifs=JSON.parse(bd);
     var now=Date.now();
-    Object.keys(watchList).forEach(function(sym){if(now-watchList[sym].addedAt>WL_EXPIRE)delete watchList[sym];});
+    Object.keys(watchList).forEach(function(sym){
+      if(now-watchList[sym].addedAt>WL_EXPIRE){
+        var elapsed=Math.round((now-watchList[sym].addedAt)/3600000);
+        addBellEvent('⏰',sym+' 已自動關單：持倉滿24小時未止盈止損（共'+elapsed+'小時），系統自動移除');
+        delete watchList[sym];
+      }
+    });
     saveWL();
   }catch(e){}
 }
@@ -1912,21 +1957,41 @@ function checkWLPrices(){
     j.data.forEach(function(t){
       var sym=t.instId.replace('-USDT','');
       var w=watchList[sym];if(!w)return;
-      if(now-w.addedAt>WL_EXPIRE){addBellEvent('⏰',sym+' 觀察清單已滿24小時，建議評估是否關單');delete watchList[sym];changed=true;return;}
+      // 24小時到期 → 自動關單
+      if(now-w.addedAt>WL_EXPIRE){
+        var elapsed=Math.round((now-w.addedAt)/3600000);
+        addBellEvent('⏰',sym+' 已自動關單：持倉滿24小時未止盈止損（共'+elapsed+'小時），系統自動移除');
+        delete watchList[sym];changed=true;return;
+      }
       var price=parseFloat(t.last);
       var tpVals=[w.t1,w.t2,w.t3,w.t4];
       var tpLabels=['TP1','TP2','TP3','TP4'];
+      // 止損命中 → 自動關單
+      if(w.sl&&!w.slHit){
+        var slHit=w.dir==='up'?price<=w.sl:price>=w.sl;
+        if(slHit){
+          showToast('⛔ '+sym+' 觸及止損，自動關單');
+          addBellEvent('⛔',sym+' 已自動關單：觸及止損 '+fmtP(w.sl)+'（進場 '+fmtP(w.entryPrice)+'）');
+          delete watchList[sym];changed=true;return;
+        }
+      }
+      // TP 逐一檢查
       tpVals.forEach(function(tv,i){
         if(!tv||w.tpHit[i])return;
         var hit=w.dir==='up'?price>=tv:price<=tv;
-        if(hit){w.tpHit[i]=true;changed=true;showToast('🎯 '+sym+' 到達 '+tpLabels[i]+'!');addBellEvent('🎯',sym+' 到達 '+tpLabels[i]+' ('+fmtP(tv)+')');}
+        if(hit){
+          w.tpHit[i]=true;changed=true;
+          showToast('🎯 '+sym+' 到達 '+tpLabels[i]+'!');
+          addBellEvent('🎯',sym+' 到達 '+tpLabels[i]+' ('+fmtP(tv)+')'+(i===3?'，已達最終目標':''));
+        }
       });
-      if(w.sl&&!w.slHit){
-        var slHit=w.dir==='up'?price<=w.sl:price>=w.sl;
-        if(slHit){w.slHit=true;changed=true;showToast('⛔ '+sym+' 觸及止損！');addBellEvent('⛔',sym+' 觸及止損 '+fmtP(w.sl));}
+      // TP4（最終目標）命中 → 自動關單
+      if(w.tpHit[3]){
+        addBellEvent('✅',sym+' 已自動關單：止盈完成（TP4達標 '+fmtP(w.t4)+'）');
+        delete watchList[sym];changed=true;
       }
     });
-    if(changed){saveWL();renderWL();}
+    if(changed){saveWL();renderWL();updateWLFab();}
   }).catch(function(){});
 }
 
@@ -1938,9 +2003,10 @@ var eb=document.getElementById('errBar');if(eb)eb.style.display='none';
 setLive(false);
 try{
 setTxt('loadStep','並行獲取資料...');
-var _r0=await Promise.all([fetchNews(),fetchSpot(),fetchSwap().catch(function(){return[];})]);var news=_r0[0],spot=_r0[1],swap=_r0[2];
+var _r0=await Promise.all([fetchNews(),fetchSpot(),fetchSwap().catch(function(){return[];}),fetchFNG()]);var news=_r0[0],spot=_r0[1],swap=_r0[2],fng=_r0[3];
 fetchBTCData();renderCalendar();
 renderNews(news,'newsList');renderHomeNews(news);
+renderFNG(fng);
 allRawTickers=spot;
 setTxt('loadStep','分析訊號...');
 var sigs=detect(spot,swap);
@@ -1969,7 +2035,9 @@ var ov2=document.getElementById('loadingOverlay');if(ov2)ov2.style.display='none
 }
 }
 
+loadWL();updateWLFab();
 startScan();
+setInterval(checkWLPrices,30000);
 </script>
 
 <!-- 觀察清單面板 -->
